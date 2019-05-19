@@ -17,6 +17,8 @@ contract UBBI{
     mapping(address => uint) publicBankBranchBalance;
     mapping(address => uint) privateBankBranchBalance;
     mapping(address => uint) foreignBankBranchBalance;
+    mapping(address => bool) registeredUser;
+    mapping(address => uint) userBalances;
 
     
     uint private _totalSupply;
@@ -26,6 +28,20 @@ contract UBBI{
     address private _commercialBankHQAddress;
     uint _scheduledBankBalance;
     uint _commercialBankBalance;
+
+    /**
+    
+    Rest of the function will be added soon
+    
+     */
+
+     /**
+     TODO:
+
+     ADD functions, modifiers and events
+     create an interface.
+     
+      */
 
 
 
