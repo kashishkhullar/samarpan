@@ -13,62 +13,181 @@ contract UBBI{
     mapping(address => uint) publicBankHQBalance;
     mapping(address => uint) privateBankHQBalance;
     mapping(address => uint) foreignBankHQBalance;
+    mapping(address => uint) ruralBankHQBalance;
     mapping(address => uint) ruralBankBranchBalance;
     mapping(address => uint) publicBankBranchBalance;
     mapping(address => uint) privateBankBranchBalance;
     mapping(address => uint) foreignBankBranchBalance;
     mapping(address => bool) registeredUser;
     mapping(address => uint) userBalances;
-
     
-    uint private _totalSupply;
+    uint private totalSupply;
     
-    address private _reserveBankAddress;
-    address private _scheduledBankHQAddress;
-    address private _commercialBankHQAddress;
-    uint private _scheduledBankBalance;
-    uint private _commercialBankBalance;
-    uint private _usableTokens;
-    uint private _reservedTokens;
+    address private reserveBankAddress;
+    address private scheduledBankHQAddress;
+    address private commercialBankHQAddress;
+    uint private scheduledBankBalance = 0;
+    uint private commercialBankBalance = 0;
+    uint private usableTokens;
+    uint private reservedTokens;
 
     modifier onlyReserveBank(){
-        require(msg.sender == _reserveBankAddress);
+        require(msg.sender == reserveBankAddress);
         _;
     }
 
     modifier onlyScheduled(){
-        require(msg.sender == _scheduledBankHQAddress);
+        require(msg.sender == scheduledBankHQAddress);
         _;
     }
 
-    constructor(uint totalSupply, uint usableTokens) public{
+    modifier onlyCommercial(){
+        require(msg.sender == commercialBankHQAddress);
+        _;
+    }
 
-        _reserveBankAddress = msg.sender;
-        _totalSupply = totalSupply;
-        _usableTokens = usableTokens;
-        _reservedTokens = totalSupply - usableTokens;
+    modifier onlyRegisteredBankHQ(address _address){
+        require(registedPublicBankBranch[_address] ||
+                registedPrivateBankBranch[_address] ||
+                registedForeignBankBranch[_address] ||
+                registedRuralBankBranch[_address]);
+        _;
+    }
+
+    modifier onlyRegisteredBranch(address _address){
+        require(registeredPublicBankHQ[_address] ||
+                registeredPrivateBankHQ[_address] ||
+                registeredForeignBankHQ[_address] ||
+                registeredRuralBankHQ[_address]);
+        _;
+    }
+
+    modifier onlyRegisteredUser(address _address){
+        require(registeredUser[_address] ==true);
+        _;
+    }
+
+    constructor (uint _totalSupply, uint _usableTokens) public{
+
+        reserveBankAddress = msg.sender;
+        totalSupply = _totalSupply;
+        usableTokens = _usableTokens;
+        reservedTokens = _totalSupply - _usableTokens;
 
     }
 
-    function registerScheduledBank(address scheduledBankHQAddress) public onlyReserveBank{
-        require(_reserveBankAddress != address(0));
-        _scheduledBankHQAddress = scheduledBankHQAddress;
+    function registerScheduledBank(address _scheduledBankHQAddress) public onlyReserveBank{
+        require(reserveBankAddress != address(0));
+        scheduledBankHQAddress = _scheduledBankHQAddress;
     }
+
+    function transferToScheduled(uint _amount) public onlyReserveBank {
+        require(reserveBankAddress != address(0));
+        require(scheduledBankHQAddress!= address(0));
+        usableTokens-=_amount;
+        scheduledBankBalance+=_amount;
+    }
+
+    function registerCommercialBank(address _commercialBankHQAddress) public onlyScheduled{
+        commercialBankHQAddress = _commercialBankHQAddress;
+    }
+// TODO check balance
+    function transferToCommercial(uint _amount) public onlyScheduled {
+        require(commercialBankHQAddress != address(0));
+        require(scheduledBankHQAddress!= address(0));
+        scheduledBankBalance-=_amount;
+        commercialBankBalance+=_amount;
+    }
+
+    function registerBankHQs(uint _type,address _address) public onlyCommercial{
+        if(_type == 0){
+            registeredPublicBankHQ[_address]= true;
+        } else if (_type == 1) {
+            registeredPrivateBankHQ[_address]= true;
+        } else if(_type == 2){
+            registeredForeignBankHQ[_address]= true;
+        } else {
+            registeredRuralBankHQ[_address] = true;
+        }
+    }
+// TODO check balance
+    function transferToBankHQs(uint _type,uint _amount, address _to) public onlyCommercial onlyRegisteredBankHQ(_to){
+        commercialBankBalance -= _amount;
+        if(_type == 0){
+            publicBankHQBalance[_to]+= _amount;
+        } else if (_type == 1) {
+            privateBankHQBalance[_to]+= _amount;
+        } else if(_type == 2){
+            foreignBankHQBalance[_to]+= _amount;
+        } else {
+            ruralBankBranchBalance[_to] += _amount;
+        }
+    }
+
+    function registerBranch(uint _type,address _address) public onlyRegisteredBankHQ(msg.sender){
+        if(_type == 0){
+            registedPublicBankBranch[_address]= true;
+        } else if (_type == 1) {
+            registedPrivateBankBranch[_address]= true;
+        } else if(_type == 2){
+            registedForeignBankBranch[_address]= true;
+        } else {
+            registedRuralBankBranch[_address] = true;
+        }
+    }
+
+    // TODO check balance
+    function transferToBranch(uint _type,address _to, uint _amount) public onlyRegisteredBranch(_to) onlyRegisteredBankHQ(msg.sender){
+        if(_type == 0){
+            publicBankHQBalance[msg.sender]-= _amount;
+            publicBankBranchBalance[_to] +=_amount;
+        } else if (_type == 1) {
+            privateBankHQBalance[msg.sender]-= _amount;
+            privateBankBranchBalance[_to] += _amount;
+        } else if(_type == 2){
+            foreignBankHQBalance[msg.sender]-= _amount;
+            foreignBankBranchBalance[_to] += _amount;
+        } else {
+            ruralBankHQBalance[msg.sender] -= _amount;
+            ruralBankBranchBalance[_to] += _amount;
+        }
+    }
+
+    function registerUsers(address _address) public onlyRegisteredBranch(msg.sender){
+        registeredUser[_address] = true;
+    }
+// TODO check balance
+    function trasferUsers(uint _type,address _to,uint _amount) public onlyRegisteredBranch(msg.sender) onlyRegisteredUser(_to){
+        if(_type == 0){
+            publicBankBranchBalance[msg.sender]-= _amount;
+            userBalances[_to] +=_amount;
+        } else if (_type == 1) {
+            privateBankBranchBalance[msg.sender]-= _amount;
+            userBalances[_to] += _amount;
+        } else if(_type == 2){
+            foreignBankBranchBalance[msg.sender]-= _amount;
+            userBalances[_to] += _amount;
+        } else {
+            ruralBankBranchBalance[msg.sender] -= _amount;
+            userBalances[_to] += _amount;
+        }
+    }
+// TODO check balance
+    function transfer(address _from, address _to, uint _amount) public onlyRegisteredUser(_from) onlyRegisteredUser(_to){
+        userBalances[_from] -= _amount;
+        userBalances[_to] += _amount;
+    }
+
+
+
+
 
 
     /**
     
-    Rest of the function will be added soon
+    Rest of the function, modifier and events will be added soon
     
      */
-
-     /**
-     TODO:
-
-     ADD functions, modifiers and events
-     create an interface.
-     
-      */
 
 
 
