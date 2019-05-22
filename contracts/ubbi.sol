@@ -82,6 +82,7 @@ contract UBBI{
     }
 
     function transferToScheduled(uint _amount) public onlyReserveBank {
+        require(usableTokens > _amount);
         require(reserveBankAddress != address(0));
         require(scheduledBankHQAddress!= address(0));
         usableTokens-=_amount;
@@ -91,8 +92,9 @@ contract UBBI{
     function registerCommercialBank(address _commercialBankHQAddress) public onlyScheduled{
         commercialBankHQAddress = _commercialBankHQAddress;
     }
-// TODO check balance
+
     function transferToCommercial(uint _amount) public onlyScheduled {
+        require(commercialBankBalance > _amount);
         require(commercialBankHQAddress != address(0));
         require(scheduledBankHQAddress!= address(0));
         scheduledBankBalance-=_amount;
@@ -110,8 +112,9 @@ contract UBBI{
             registeredRuralBankHQ[_address] = true;
         }
     }
-// TODO check balance
+
     function transferToBankHQs(uint _type,uint _amount, address _to) public onlyCommercial onlyRegisteredBankHQ(_to){
+        require(commercialBankBalance > _amount);
         commercialBankBalance -= _amount;
         if(_type == 0){
             publicBankHQBalance[_to]+= _amount;
@@ -136,18 +139,21 @@ contract UBBI{
         }
     }
 
-    // TODO check balance
     function transferToBranch(uint _type,address _to, uint _amount) public onlyRegisteredBranch(_to) onlyRegisteredBankHQ(msg.sender){
         if(_type == 0){
+            require(publicBankHQBalance[msg.sender] > _amount);
             publicBankHQBalance[msg.sender]-= _amount;
             publicBankBranchBalance[_to] +=_amount;
         } else if (_type == 1) {
+            require(privateBankHQBalance[msg.sender] > _amount);
             privateBankHQBalance[msg.sender]-= _amount;
             privateBankBranchBalance[_to] += _amount;
         } else if(_type == 2){
+            require(foreignBankHQBalance[msg.sender] > _amount);
             foreignBankHQBalance[msg.sender]-= _amount;
             foreignBankBranchBalance[_to] += _amount;
         } else {
+            require(ruralBankHQBalance[msg.sender] > _amount);
             ruralBankHQBalance[msg.sender] -= _amount;
             ruralBankBranchBalance[_to] += _amount;
         }
@@ -156,24 +162,30 @@ contract UBBI{
     function registerUsers(address _address) public onlyRegisteredBranch(msg.sender){
         registeredUser[_address] = true;
     }
-// TODO check balance
+
     function trasferUsers(uint _type,address _to,uint _amount) public onlyRegisteredBranch(msg.sender) onlyRegisteredUser(_to){
+
         if(_type == 0){
+            require(publicBankBranchBalance[msg.sender] > _amount);
             publicBankBranchBalance[msg.sender]-= _amount;
             userBalances[_to] +=_amount;
         } else if (_type == 1) {
+            require(privateBankBranchBalance[msg.sender] > _amount);
             privateBankBranchBalance[msg.sender]-= _amount;
             userBalances[_to] += _amount;
         } else if(_type == 2){
+            require(foreignBankBranchBalance[msg.sender] > _amount);
             foreignBankBranchBalance[msg.sender]-= _amount;
             userBalances[_to] += _amount;
         } else {
+            require(ruralBankBranchBalance[msg.sender] > _amount);
             ruralBankBranchBalance[msg.sender] -= _amount;
             userBalances[_to] += _amount;
         }
     }
-// TODO check balance
+
     function transfer(address _from, address _to, uint _amount) public onlyRegisteredUser(_from) onlyRegisteredUser(_to){
+        require(userBalances[_from] >= _amount);
         userBalances[_from] -= _amount;
         userBalances[_to] += _amount;
     }
