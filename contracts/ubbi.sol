@@ -1,5 +1,17 @@
 pragma solidity^0.5.0;
 
+/**
+TODO:
+Add require statement reasons
+Perform testing
+Add events
+Add get functions
+Add update functions
+*/
+
+
+
+
 contract UBBI{
 
     mapping(address => bool) registeredPublicBankHQ;
@@ -46,7 +58,7 @@ contract UBBI{
         _;
     }
 
-    modifier onlyRegisteredBankHQ(address _address){
+    modifier onlyRegisteredBranch(address _address){
         require(registedPublicBankBranch[_address] ||
                 registedPrivateBankBranch[_address] ||
                 registedForeignBankBranch[_address] ||
@@ -54,7 +66,7 @@ contract UBBI{
         _;
     }
 
-    modifier onlyRegisteredBranch(address _address){
+    modifier onlyRegisteredBankHQ(address _address){
         require(registeredPublicBankHQ[_address] ||
                 registeredPrivateBankHQ[_address] ||
                 registeredForeignBankHQ[_address] ||
@@ -69,6 +81,7 @@ contract UBBI{
 
     constructor (uint _totalSupply, uint _usableTokens) public{
 
+        require(_totalSupply>0 && _usableTokens>0 && _totalSupply>_usableTokens);
         reserveBankAddress = msg.sender;
         totalSupply = _totalSupply;
         usableTokens = _usableTokens;
@@ -94,7 +107,7 @@ contract UBBI{
     }
 
     function transferToCommercial(uint _amount) public onlyScheduled {
-        require(commercialBankBalance > _amount);
+        require(scheduledBankBalance > _amount);
         require(commercialBankHQAddress != address(0));
         require(scheduledBankHQAddress!= address(0));
         scheduledBankBalance-=_amount;
@@ -114,7 +127,7 @@ contract UBBI{
     }
 
     function transferToBankHQs(uint _type,uint _amount, address _to) public onlyCommercial onlyRegisteredBankHQ(_to){
-        require(commercialBankBalance > _amount);
+        require(commercialBankBalance > _amount,"here");
         commercialBankBalance -= _amount;
         if(_type == 0){
             publicBankHQBalance[_to]+= _amount;
@@ -163,7 +176,7 @@ contract UBBI{
         registeredUser[_address] = true;
     }
 
-    function trasferUsers(uint _type,address _to,uint _amount) public onlyRegisteredBranch(msg.sender) onlyRegisteredUser(_to){
+    function transferToUsers(uint _type,address _to,uint _amount) public onlyRegisteredBranch(msg.sender) onlyRegisteredUser(_to){
 
         if(_type == 0){
             require(publicBankBranchBalance[msg.sender] > _amount);
@@ -189,23 +202,6 @@ contract UBBI{
         userBalances[_from] -= _amount;
         userBalances[_to] += _amount;
     }
-
-
-
-
-
-
-    /**
-    
-    Rest of the function, modifier and events will be added soon
-    
-     */
-
-
-
-
-
-
 
 
 }
