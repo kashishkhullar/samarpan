@@ -2,11 +2,10 @@ pragma solidity^0.5.0;
 
 /**
 TODO:
-Add require statement reasons
 Perform testing
 Add events
-Add get functions
-Add update functions
+break code into seperate files
+abstract code into an interface
 */
 
 
@@ -18,10 +17,10 @@ contract UBBI{
     mapping(address => bool) registeredPrivateBankHQ;
     mapping(address => bool) registeredForeignBankHQ;
     mapping(address => bool) registeredRuralBankHQ;
-    mapping(address => bool) registedPublicBankBranch;
-    mapping(address => bool) registedForeignBankBranch;
-    mapping(address => bool) registedPrivateBankBranch;
-    mapping(address => bool) registedRuralBankBranch;
+    mapping(address => mapping(address => bool)) registedPublicBankBranch;
+    mapping(address => mapping(address => bool)) registedForeignBankBranch;
+    mapping(address => mapping(address => bool)) registedPrivateBankBranch;
+    mapping(address => mapping(address => bool)) registedRuralBankBranch;
     mapping(address => uint) publicBankHQBalance;
     mapping(address => uint) privateBankHQBalance;
     mapping(address => uint) foreignBankHQBalance;
@@ -58,12 +57,12 @@ contract UBBI{
         _;
     }
 
-    modifier onlyRegisteredBranch(address _address){
+    modifier onlyRegisteredBranch(address _HQ, address _branch){
         require(
-            registedPublicBankBranch[_address] ||
-            registedPrivateBankBranch[_address] ||
-            registedForeignBankBranch[_address] ||
-            registedRuralBankBranch[_address],"branch not registered");
+            registedPublicBankBranch[_HQ][_branch] ||
+            registedPrivateBankBranch[_HQ][_branch] ||
+            registedForeignBankBranch[_HQ][_branch] ||
+            registedRuralBankBranch[_HQ][_branch],"branch not registered");
         _;
     }
 
@@ -185,7 +184,7 @@ contract UBBI{
         } else if(_type == 2){
             foreignBankHQBalance[_to] += _amount;
         } else {
-            ruralBankBranchBalance[_to] += _amount;
+            ruralBankHQBalance[_to] += _amount;
         }
     }
 
@@ -203,29 +202,29 @@ contract UBBI{
 
     function registerBranch(uint _type,address _address) public onlyRegisteredBankHQ(msg.sender){
         if(_type == 0){
-            registedPublicBankBranch[_address] = true;
+            registedPublicBankBranch[msg.sender][_address] = true;
         } else if (_type == 1) {
-            registedPrivateBankBranch[_address] = true;
+            registedPrivateBankBranch[msg.sender][_address] = true;
         } else if(_type == 2){
-            registedForeignBankBranch[_address] = true;
+            registedForeignBankBranch[msg.sender][_address] = true;
         } else {
-            registedRuralBankBranch[_address] = true;
+            registedRuralBankBranch[msg.sender][_address] = true;
         }
     }
 
-    function checkRegisteredBranch(uint _type,address _address) public view returns(bool){
+    function checkRegisteredBranch(uint _type,address _branchAddress,address _HQAddress) public view returns(bool){
         if(_type == 0){
-            return registedPublicBankBranch[_address];
+            return registedPublicBankBranch[_HQAddress][_branchAddress];
         } else if (_type == 1) {
-            return registedPrivateBankBranch[_address];
+            return registedPrivateBankBranch[_HQAddress][_branchAddress];
         } else if(_type == 2){
-            return registedForeignBankBranch[_address];
+            return registedForeignBankBranch[_HQAddress][_branchAddress];
         } else {
-            return registedRuralBankBranch[_address];
+            return registedRuralBankBranch[_HQAddress][_branchAddress];
         }
     }
 
-    function transferToBranch(uint _type,address _to, uint _amount) public onlyRegisteredBranch(_to) onlyRegisteredBankHQ(msg.sender){
+    function transferToBranch(uint _type,address _to, uint _amount) public onlyRegisteredBranch(msg.sender,_to) onlyRegisteredBankHQ(msg.sender){
         if(_type == 0){
             require(publicBankHQBalance[msg.sender] > _amount,"amount greater than public hq balance");
             publicBankHQBalance[msg.sender] -= _amount;
@@ -257,7 +256,7 @@ contract UBBI{
         }
     }
 
-    function registerUsers(address _address) public onlyRegisteredBranch(msg.sender){
+    function registerUsers(address _address,address _HQAddress) public onlyRegisteredBranch(_HQAddress,msg.sender){
         registeredUser[_address] = true;
     }
 
@@ -265,7 +264,7 @@ contract UBBI{
         return registeredUser[_address];
     }
 
-    function transferToUsers(uint _type,address _to,uint _amount) public onlyRegisteredBranch(msg.sender) onlyRegisteredUser(_to){
+    function transferToUsers(uint _type,address _to,uint _amount,address _HQAddress) public onlyRegisteredBranch(_HQAddress,msg.sender) onlyRegisteredUser(_to){
 
         if(_type == 0){
             require(publicBankBranchBalance[msg.sender] > _amount,"amount greater than public branch balance");
@@ -286,9 +285,9 @@ contract UBBI{
         }
     }
 
-    function transfer(address _from, address _to, uint _amount) public onlyRegisteredUser(_from) onlyRegisteredUser(_to){
-        require(userBalances[_from] >= _amount,"amount is greater than balance");
-        userBalances[_from] -= _amount;
+    function transfer( address _to, uint _amount) public onlyRegisteredUser(msg.sender) onlyRegisteredUser(_to){
+        require(userBalances[msg.sender] >= _amount,"amount is greater than balance");
+        userBalances[msg.sender] -= _amount;
         userBalances[_to] += _amount;
     }
 
